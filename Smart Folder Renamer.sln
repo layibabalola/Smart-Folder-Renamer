@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Smart Folder Renamer", "Smart Folder Renamer\Smart Folder Renamer.csproj", "{8E25F546-BB39-4D0F-9AE9-DBD9C2DC77BB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7FB8AD98-A348-4FBB-BD85-0D2CA8A943AF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8E25F546-BB39-4D0F-9AE9-DBD9C2DC77BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E25F546-BB39-4D0F-9AE9-DBD9C2DC77BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E25F546-BB39-4D0F-9AE9-DBD9C2DC77BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E25F546-BB39-4D0F-9AE9-DBD9C2DC77BB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 2
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://obabalola.visualstudio.com/defaultcollection
+		SccProjectUniqueName0 = Smart\u0020Folder\u0020Renamer\\Smart\u0020Folder\u0020Renamer.csproj
+		SccProjectName0 = Smart\u0020Folder\u0020Renamer
+		SccLocalPath0 = Smart\u0020Folder\u0020Renamer
+		SccLocalPath1 = .
+	EndGlobalSection
+EndGlobal
