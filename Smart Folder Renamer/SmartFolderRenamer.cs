@@ -37,7 +37,8 @@ namespace Smart_Folder_Renamer
         bool isResting = true;
 
         static ConcurrentQueue<DirectoryInfo> dirQueue = new ConcurrentQueue<DirectoryInfo>();
-        static ConcurrentQueue<DirectoryInfo> previousRenamedQueue = new ConcurrentQueue<DirectoryInfo>();
+        static ConcurrentQueue<DirectoryInfo> previouslyRenamedQueue = new ConcurrentQueue<DirectoryInfo>();
+        static ConcurrentQueue<DirectoryInfo> recentlyRenamedQueue = new ConcurrentQueue<DirectoryInfo>();
 
         BackgroundWorker bwBusiness;
         Stopwatch swCanceling = new System.Diagnostics.Stopwatch();
@@ -328,7 +329,7 @@ namespace Smart_Folder_Renamer
             maxDirQueue = 0; ;
             currentDirectory = initialDirectory;
 
-            if (moveRenamedFolders && previousRenamedQueue.Count() > 0)
+            if (moveRenamedFolders && previouslyRenamedQueue.Count() > 0)
             {
                 btnHandlePreviousRenamed_Click(this, new EventArgs());
             }
@@ -813,7 +814,7 @@ namespace Smart_Folder_Renamer
 
                                 BeginInvoke((MethodInvoker)delegate
                                 {
-                                    FindAndMoveMsgBox("Work Status", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                                    FindAndMoveMsgBox("Work Status", this.Location.X + this.Height / 3, this.Location.Y + this.Width / 8);
                                     MessageBox.Show(this, msg, "Work Status");
                                 });
                             }
@@ -906,17 +907,20 @@ namespace Smart_Folder_Renamer
                 try
                 {
                     diListStopwatch.Start();
-                    //List<DirectoryInfo> diList = di.EnumerateDirectories("*", SearchOption.AllDirectories).Where(d => d.Name == txtSourceFolder.Text).ToList();
                     swPBar.Start();
-                    List<DirectoryInfo> diList = di.EnumerateDirectories("*", SearchOption.AllDirectories).Where(d => d.Name == searchName).ToList();
+                    //Exclude children of matches
+                    //Exclude children of previously matched
+                    //Exclude destination folder from search list
+                    List<DirectoryInfo> diList = di.EnumerateDirectories("*", SearchOption.AllDirectories).Where(
+                        d => d.Name == searchName && !d.FullName.Contains("\\" + searchName + "\\") && !d.FullName.Contains(" - " + searchName) && (destDirectory.Length > 0 ? !d.FullName.Contains(destDirectory) : true)).ToList();
 
                     List<DirectoryInfo> previousRenamedDiList = new List<DirectoryInfo>();
-                    if (moveRenamedFolders)
-                    {
-                        //Search for previously renamed folders in case the user wants to move them to a new directory
-                        previousRenamedDiList = di.EnumerateDirectories("*", SearchOption.AllDirectories).Where(d => d.Name.Contains(" - " + searchName)).ToList();
-                    }
 
+                    //Search for previously renamed folders in case the user wants to move them to a new directory
+                    //Exclude destination folder from search list
+                    previousRenamedDiList = di.EnumerateDirectories("*", SearchOption.AllDirectories).Where(d => d.Name.Contains(" - " + searchName) && (destDirectory.Length > 0 ? !d.FullName.Contains(destDirectory) : true)).ToList();
+
+                    
                     swPBar.Stop();
                     swPBar.Reset();
 
@@ -928,7 +932,7 @@ namespace Smart_Folder_Renamer
                     dirQueue = new ConcurrentQueue<DirectoryInfo>(diList);
                     if (moveRenamedFolders)
                     {
-                        previousRenamedQueue = new ConcurrentQueue<DirectoryInfo>(previousRenamedDiList);
+                        previouslyRenamedQueue = new ConcurrentQueue<DirectoryInfo>(previousRenamedDiList);
                     }
 
                     maxDirQueue = dirQueue.Count;
@@ -1031,92 +1035,28 @@ namespace Smart_Folder_Renamer
 
                         try
                         {
-                            dir.MoveTo(dir.Parent.FullName + "\\" + newFolderName);
+                            string source = dir.FullName;
+                            string dest = dir.Parent.FullName + "\\" + newFolderName;
+                            dir = new DirectoryInfo(dir.Root.FullName);
+                            
+                            Directory.Move(source, dest);
+                            recentlyRenamedQueue.Enqueue(new DirectoryInfo(dest));
 
                             //Renaming was Successful?
                             foldersRenamed++;
+                        }
+                        catch(IOException iex)
+                        {
+
                         }
                         catch (Exception ex)
                         {
                             errorCount++;
                             BeginInvoke((MethodInvoker)delegate
                             {
-                                FindAndMoveMsgBox("Folder Rename Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                                FindAndMoveMsgBox("Folder Rename Error", this.Location.X + this.Width / 8, this.Location.Y + this.Height / 2);
                                 MessageBox.Show(this, ex.Message, "Folder Rename Error");
                             });
-                        }
-
-                        if (!formClosed)
-                        {
-                            //Move SubDirectory if moving renamed folders is enabled
-                            if (moveRenamedFolders)
-                            {
-                                try
-                                {
-                                    //If custom rename and merge activated, move all files in directory to destination and delete directory
-                                    if (customRename)
-                                    {
-                                        //Create destination if it doesnt exist yet
-                                        if (!Directory.Exists(destDirectory + "\\" + dir.Name))
-                                        {
-                                            Directory.CreateDirectory(destDirectory + "\\" + dir.Name);
-                                        }
-
-                                        //Move all files in directory to destination and delete directory
-                                        var files = dir.EnumerateFiles().Where(f => !f.Name.Contains(".log"));
-
-                                        foreach (FileInfo fi in files)
-                                        {
-                                            if (!File.Exists(destDirectory + "\\" + dir.Name + "\\" + fi.Name))
-                                            {
-                                                File.Move(fi.FullName, destDirectory + "\\" + dir.Name + "\\" + fi.Name);
-                                            }
-                                            else
-                                            {
-                                                //Overwrite smaller duplicate
-                                                if(fi.Length > new FileInfo(destDirectory + "\\" + dir.Name + "\\" + fi.Name).Length)
-                                                {
-                                                    File.Delete(destDirectory + "\\" + dir.Name + "\\" + fi.Name);
-                                                    File.Move(fi.FullName, destDirectory + "\\" + dir.Name + "\\" + fi.Name);
-                                                    File.Create(dir.FullName + "\\DeletionLog." + fi.Name + "." +
-                                                        Guid.NewGuid().ToString() + ".log");
-                                                }
-                                                else
-                                                {
-                                                    File.Delete(fi.FullName);
-                                                    File.Create(dir.FullName + "\\DeletionLog." + fi.Name + "." +
-                                                        Guid.NewGuid().ToString() + ".log");
-                                                }
-                                            }
-                                        }
-
-                                        if (dir.EnumerateFiles().Count() == 0)
-                                        {
-                                            dir.Delete();
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (!Directory.Exists(destDirectory))
-                                        {
-                                            Directory.Move(dir.FullName, destDirectory + "\\" + dir.Name);
-                                            //dir.MoveTo(destDirectory);
-
-                                            //Moving was Successful?
-                                            foldersMoved++;
-                                        }
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    errorCount++;
-                                    BeginInvoke((MethodInvoker)delegate
-                                    {
-                                        FindAndMoveMsgBox("Folder Move Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
-                                        MessageBox.Show(this, ex.Message, "Folder Move Error");
-                                    });
-                                }
-                            }
                         }
                     }
                 }
@@ -1128,6 +1068,93 @@ namespace Smart_Folder_Renamer
                         File.WriteAllText(dir.FullName + "\\ExceptionLog." + dir.Name + "." +
                             Guid.NewGuid().ToString() + ".log", ex.Message + "\r\n" + ex.StackTrace);
                     }
+                }
+            }
+
+            if (!formClosed)
+            {
+                //Move directory if moving renamed folders is enabled
+                if (moveRenamedFolders)
+                {
+                    try
+                    {
+                        while (recentlyRenamedQueue.Count() > 0)
+                        {
+                            DirectoryInfo dir;
+                            recentlyRenamedQueue.TryDequeue(out dir);
+
+                            string source = dir.FullName;
+                            string dest = destDirectory + "\\" + dir.Name;
+
+                            //If custom rename and merge activated, move all files in directory to destination and delete directory
+                            if (customRename)
+                            {
+                                //Create destination if it doesnt exist yet
+                                if (!Directory.Exists(destDirectory + "\\" + dir.Name))
+                                {
+                                    Directory.CreateDirectory(destDirectory + "\\" + dir.Name);
+                                }
+
+                                //Move all files in directory to destination and delete directory
+                                var files = dir.EnumerateFiles().Where(f => !f.Name.Contains(".log"));
+
+                                foreach (FileInfo fi in files)
+                                {
+                                    if (!File.Exists(destDirectory + "\\" + dir.Name + "\\" + fi.Name))
+                                    {
+                                        File.Move(fi.FullName, destDirectory + "\\" + dir.Name + "\\" + fi.Name);
+                                    }
+                                    else
+                                    {
+                                        //Overwrite smaller duplicate
+                                        if (fi.Length > new FileInfo(destDirectory + "\\" + dir.Name + "\\" + fi.Name).Length)
+                                        {
+                                            File.Delete(destDirectory + "\\" + dir.Name + "\\" + fi.Name);
+                                            File.Move(fi.FullName, destDirectory + "\\" + dir.Name + "\\" + fi.Name);
+                                            File.Create(dir.FullName + "\\DeletionLog." + fi.Name + "." +
+                                                Guid.NewGuid().ToString() + ".log");
+                                        }
+                                        else
+                                        {
+                                            File.Delete(fi.FullName);
+                                            File.Create(dir.FullName + "\\DeletionLog." + fi.Name + "." +
+                                                Guid.NewGuid().ToString() + ".log");
+                                        }
+                                    }
+                                }
+
+                                if (dir.EnumerateFiles().Count() == 0)
+                                {
+                                    dir.Delete();
+                                }
+                            }
+                            else
+                            {
+                                if (Directory.Exists(source))
+                                {
+                                    Directory.Move(source, dest);
+
+                                    //Moving was Successful?
+                                    foldersMoved++;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errorCount++;
+                        BeginInvoke((MethodInvoker)delegate
+                        {
+                            FindAndMoveMsgBox("Folder Move Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                            MessageBox.Show(this, ex.Message, "Folder Move Error");
+                        });
+                    }
+                }
+                else
+                {
+                    //Blow away the queue since "recent" time is over, my friend.
+                    //We're in previous territory now, bub.
+                    recentlyRenamedQueue = new ConcurrentQueue<DirectoryInfo>();
                 }
             }
 
@@ -1282,9 +1309,26 @@ namespace Smart_Folder_Renamer
                     bwProgressBar.RunWorkerAsync();
 
                     initialDirectory = txtSourceFolder.Text;
-                    destDirectory = txtDestFolder.Text;
+
                     searchName = txtSearchName.Text;
-                    customRenameText = txtCustomRename.Text.Trim();
+
+                    if(chkMoveFolders.Checked)
+                    {
+                        destDirectory = txtDestFolder.Text;
+                    }
+                    else
+                    {
+                        destDirectory = string.Empty;
+                    }
+
+                    if(chkCustomRename.Checked)
+                    {
+                        customRenameText = txtCustomRename.Text.Trim();
+                    }
+                    else
+                    {
+                        customRenameText = string.Empty;
+                    }
                 }
             }
         }
@@ -1379,15 +1423,23 @@ namespace Smart_Folder_Renamer
                 FindAndMoveMsgBox("Renamed Folders Detected", this.Location.X + this.Height / 6, this.Location.Y + this.Width / 8);
 
                 if (
-                MessageBox.Show(this, string.Format("{0} previously renamed folders detected. Move them to destination folder?", previousRenamedQueue.Count()),
+                MessageBox.Show(this, string.Format("{0} previously renamed folders detected. Move them to destination folder?", previouslyRenamedQueue.Count()),
                     "Renamed Folders Detected", MessageBoxButtons.YesNo) == DialogResult.Yes)
                 {
                     try
                     {
-                        foreach (DirectoryInfo di in previousRenamedQueue)
+                        string source = string.Empty;
+                        string dest = string.Empty;
+
+                        while(previouslyRenamedQueue.Count() > 0)
                         {
-                            Directory.Move(di.FullName, destDirectory + "\\" + di.Name);
-                            //di.MoveTo(destDirectory);
+                            DirectoryInfo di;
+                            previouslyRenamedQueue.TryDequeue(out di);
+
+                            source = di.FullName;
+                            dest = destDirectory + "\\" + di.Name;
+                            
+                            Directory.Move(source, dest);
                         }
                     }
                     catch (Exception ex)
