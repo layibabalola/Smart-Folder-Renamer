@@ -131,7 +131,7 @@ namespace Smart_Folder_Renamer
             bwThreads.RunWorkerAsync();
         }
 
-        void FindAndMoveMsgBox(string title, int x, int y)
+        void FindAndMoveMsgBox(string title, Form form)
         {
             //Moves a messagebox to the desired position
             Thread thr = new Thread(() => // create a new thread
@@ -140,10 +140,9 @@ namespace Smart_Folder_Renamer
                 // while there's no MessageBox, FindWindow returns IntPtr.Zero
                 while ((msgBox = FindWindow(IntPtr.Zero, title)) == IntPtr.Zero) ;
                 // after the while loop, msgBox is the handle of your MessageBox
-                Rectangle r = new Rectangle();
 
                 ManagedWinapi.Windows.SystemWindow msgBoxWindow = new ManagedWinapi.Windows.SystemWindow(msgBox);
-                msgBoxWindow.Location = new Point(x, y);
+                msgBoxWindow.Location = new Point(form.Location.X + (form.Size.Width - msgBoxWindow.Size.Width) / 2, form.Location.Y + (form.Size.Height - msgBoxWindow.Size.Height) / 2);
             });
             thr.IsBackground = true;
             thr.Start(); // starts the thread
@@ -814,7 +813,7 @@ namespace Smart_Folder_Renamer
 
                                 BeginInvoke((MethodInvoker)delegate
                                 {
-                                    FindAndMoveMsgBox("Work Status", this.Location.X + this.Height / 3, this.Location.Y + this.Width / 8);
+                                    FindAndMoveMsgBox("Work Status", this);
                                     MessageBox.Show(this, msg, "Work Status");
                                 });
                             }
@@ -956,7 +955,7 @@ namespace Smart_Folder_Renamer
             {
                 BeginInvoke((MethodInvoker)delegate
                 {
-                    FindAndMoveMsgBox("Directory Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                    FindAndMoveMsgBox("Directory Error", this);
                     MessageBox.Show(this, "Folder Path Invalid", "Directory Error");
                 });
             }
@@ -1054,7 +1053,7 @@ namespace Smart_Folder_Renamer
                             errorCount++;
                             BeginInvoke((MethodInvoker)delegate
                             {
-                                FindAndMoveMsgBox("Folder Rename Error", this.Location.X + this.Width / 8, this.Location.Y + this.Height / 2);
+                                FindAndMoveMsgBox("Folder Rename Error", this);
                                 MessageBox.Show(this, ex.Message, "Folder Rename Error");
                             });
                         }
@@ -1145,7 +1144,7 @@ namespace Smart_Folder_Renamer
                         errorCount++;
                         BeginInvoke((MethodInvoker)delegate
                         {
-                            FindAndMoveMsgBox("Folder Move Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                            FindAndMoveMsgBox("Folder Move Error", this);
                             MessageBox.Show(this, ex.Message, "Folder Move Error");
                         });
                     }
@@ -1239,7 +1238,7 @@ namespace Smart_Folder_Renamer
                     if (txtCustomRename.Text.Trim() == string.Empty)
                     {
                         error = true;
-                        FindAndMoveMsgBox("Custom Rename Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                        FindAndMoveMsgBox("Custom Rename Error", this);
                         MessageBox.Show(this, "Invalid Custom Rename Text.", "Custom Rename Error");
                     }
                 }
@@ -1250,7 +1249,7 @@ namespace Smart_Folder_Renamer
                     {
                         error = true;
 
-                        FindAndMoveMsgBox("Destination Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                        FindAndMoveMsgBox("Destination Error", this);
                         MessageBox.Show(this, "Invalid destination path.", "Destination Error");
                     }
                     else
@@ -1260,7 +1259,7 @@ namespace Smart_Folder_Renamer
                             if (Directory.CreateDirectory(txtDestFolder.Text) == null)
                             {
                                 error = true;
-                                FindAndMoveMsgBox("Destination Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                                FindAndMoveMsgBox("Destination Error", this);
                                 MessageBox.Show(this, "Invalid destination path.", "Destination Error");
                             }
                         }
@@ -1268,7 +1267,7 @@ namespace Smart_Folder_Renamer
                         {
                             errorCount++;
                             error = true;
-                            FindAndMoveMsgBox("Destination Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                            FindAndMoveMsgBox("Destination Error", this);
                             MessageBox.Show(this, "Invalid destination path. " + ex.Message, "Destination Error");
                         }
                     }
@@ -1277,13 +1276,13 @@ namespace Smart_Folder_Renamer
             if (txtSourceFolder.Text.Trim() == string.Empty || !Directory.Exists(txtSourceFolder.Text))
             {
                 error = true;
-                FindAndMoveMsgBox("Source Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                FindAndMoveMsgBox("Source Error", this);
                 MessageBox.Show(this, "Invalid source folder path.", "Source Error");
             }
             if (txtSearchName.Text.Trim() == string.Empty)
             {
                 error = true;
-                FindAndMoveMsgBox("Matching Subfolder Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                FindAndMoveMsgBox("Matching Subfolder Error", this);
                 MessageBox.Show(this, "Invalid Matching Subfolder Name.", "Matching Subfolder Error");
             }
 
@@ -1420,7 +1419,7 @@ namespace Smart_Folder_Renamer
         {
             BeginInvoke((MethodInvoker)delegate
             {
-                FindAndMoveMsgBox("Renamed Folders Detected", this.Location.X + this.Height / 6, this.Location.Y + this.Width / 8);
+                FindAndMoveMsgBox("Renamed Folders Detected", this);
 
                 if (
                 MessageBox.Show(this, string.Format("{0} previously renamed folders detected. Move them to destination folder?", previouslyRenamedQueue.Count()),
@@ -1445,7 +1444,7 @@ namespace Smart_Folder_Renamer
                     catch (Exception ex)
                     {
                         errorCount++;
-                        FindAndMoveMsgBox("Folder Move Error", this.Location.X + this.Height / 2, this.Location.Y + this.Width / 8);
+                        FindAndMoveMsgBox("Folder Move Error", this);
                         MessageBox.Show(this, ex.Message, "Folder Move Error");
                     }
                 }
