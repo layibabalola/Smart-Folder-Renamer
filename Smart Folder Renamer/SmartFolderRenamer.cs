@@ -688,7 +688,7 @@ namespace Smart_Folder_Renamer
                             TextBox txt3 = new TextBox();
                             txt3.Name = txtSearchName.Name;
                             txt3.Text = txtSearchName.Text;
-                            txt3.SelectionStart = txt3.Text.Length - 1;
+                            txt3.SelectionStart = txt3.Text.Length > 0 ? txt3.Text.Length - 1 : 0;
                             txt3.SelectionLength = 0;
                             txt3.Enabled = false;
 
@@ -910,8 +910,15 @@ namespace Smart_Folder_Renamer
                     //Exclude children of matches
                     //Exclude children of previously matched
                     //Exclude destination folder from search list
+
                     List<DirectoryInfo> diList = di.EnumerateDirectories("*", SearchOption.AllDirectories).Where(
                         d => d.Name == searchName && !d.FullName.Contains("\\" + searchName + "\\") && !d.FullName.Contains(" - " + searchName) && (destDirectory.Length > 0 ? !d.FullName.Contains(destDirectory) : true)).ToList();
+
+                    List<string> dirNames = new List<string>();
+                    foreach(var d in diList)
+                    {
+                        dirNames.Add(d.FullName);
+                    }
 
                     List<DirectoryInfo> previousRenamedDiList = new List<DirectoryInfo>();
 
@@ -919,7 +926,12 @@ namespace Smart_Folder_Renamer
                     //Exclude destination folder from search list
                     previousRenamedDiList = di.EnumerateDirectories("*", SearchOption.AllDirectories).Where(d => d.Name.Contains(" - " + searchName) && (destDirectory.Length > 0 ? !d.FullName.Contains(destDirectory) : true)).ToList();
 
-                    
+                    List<string> prevDirNames = new List<string>();
+                    foreach (var d in diList)
+                    {
+                        prevDirNames.Add(d.FullName);
+                    }
+
                     swPBar.Stop();
                     swPBar.Reset();
 
@@ -1272,7 +1284,16 @@ namespace Smart_Folder_Renamer
                         }
                     }
                 }
+                else if (txtSourceFolder.Text.Trim().Contains(txtDestFolder.Text.Trim()))
+                {
+                    error = true;
+
+                    FindAndMoveMsgBox("Destination Error", this);
+                    MessageBox.Show(this, "Invalid destination path. Please make sure your destination path is not part of your source path.", 
+                        "Destination Error");
+                }
             }
+
             if (txtSourceFolder.Text.Trim() == string.Empty || !Directory.Exists(txtSourceFolder.Text))
             {
                 error = true;
@@ -1288,6 +1309,13 @@ namespace Smart_Folder_Renamer
 
             if (!error)
             {
+                //Save selected paths to user settings
+                Smart_Folder_Renamer.Properties.Settings.Default.SourceFolder = txtSourceFolder.Text;
+                Smart_Folder_Renamer.Properties.Settings.Default.Save();
+
+                Smart_Folder_Renamer.Properties.Settings.Default.DestinationFolder = txtDestFolder.Text;
+                Smart_Folder_Renamer.Properties.Settings.Default.Save();
+
                 btnRenameFolders.Enabled = false;
 
                 if (!bwPreparing.IsBusy && !bwProgressBar.IsBusy)
